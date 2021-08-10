@@ -94,7 +94,7 @@ def findRune():
     rune_status = 1
     rune_loc = 0
     try:
-        rune_loc = pyautogui.locateOnScreen('images/minirune.png',confidence=0.65,region=(0,0,330,220))
+        rune_loc = pyautogui.locateOnScreen('images/minirunev3.png',confidence=0.8,region=(0,0,330,220))
     except Exception as e:
         rune_status = 0 
         print("Rune not found,",e)
@@ -106,7 +106,7 @@ def findPlayer():
     player_status = 1
     player_loc = 0
     try:
-        player_loc = pyautogui.locateOnScreen('images/minime.png',confidence=0.65,region=(0,0,330,220))
+        player_loc = pyautogui.locateOnScreen('images/minimev3.png',confidence=0.8,region=(0,0,330,220))
     except Exception as e:
         player_status = 0
         print("Player not found",e)
@@ -135,12 +135,14 @@ def moveRune():
     playerX,playerY = findPlayer()
     runeX,runeY = findRune()
     interval = 2.0
+    print("Rune Location : ",findRune())
+    print("Player location: ",findPlayer())
     if runeX < playerX:
         player_to_rune = 1
     elif runeX > playerX:
         player_to_rune = 2
     if player_to_rune == 2:
-        while(playerX < runeX-2):
+        while(playerX < runeX-4):
             if(playerX > runeX-25):
                 interval = 0.1
             pressKey(RIGHT)
@@ -148,7 +150,7 @@ def moveRune():
             releaseKey(RIGHT)
             playerX,playerY = findPlayer()
     elif player_to_rune == 1:
-        while(playerX > runeX+2):
+        while(playerX > runeX+4):
             if(playerX < playerX+25):
                 interval = 0.1
             pressKey(LEFT)
