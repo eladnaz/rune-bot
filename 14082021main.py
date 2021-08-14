@@ -18,10 +18,11 @@ PLAYERX_SAVED = 0
 PLAYERY_SAVED = 0
 RUNE_EXIST = False
 BOT_STATUS = 0
+CHANNEL_ID = "876090831356952596"
 chatid = ''
 client = discord.Client()
-Token ='ODc2MDExNzY2OTM5ODAzNjY4.YRd3iA.J0I-bxAdpbPujJzPLRuMn24MOCM'
-currentuser = 'shinobu'
+Token ='ODc2MDkxNDE0OTQ0MDM0ODU2.YRfBtg.ekYuxDhZhGZfUVhWm3CAOsIgC90'
+currentuser = 'pull'
 bot = commands.Bot(command_prefix=currentuser)
 
 SendInput = ctypes.windll.user32.SendInput
@@ -139,33 +140,36 @@ def ropeLift():
     time.sleep(0.5)
     releaseKey(LCTRL)
 
+def flashJump():
+    pressKey(SPACE)
+    print("JUMP")
+    time.sleep(0.1)
+    releaseKey(SPACE)
+
 def moveRune():
     #0 = same pos, 1= player right of rune, 2=player left of rune
     goToFloor()
     player_to_rune = 0 
     playerX,playerY = findPlayer()
     runeX,runeY = findRune()
-    interval = 2.0
     if runeX < playerX:
         player_to_rune = 1
     elif runeX > playerX:
         player_to_rune = 2
     if player_to_rune == 2:
         while(playerX < runeX-2):
-            if(playerX > runeX-25):
-                interval = 0.1
             pressKey(RIGHT)
-            time.sleep(interval)
-            releaseKey(RIGHT)
+            if not (playerX > runeX-25):
+                flashJump()
             playerX,playerY = findPlayer()
+        releaseKey(RIGHT)
     elif player_to_rune == 1:
         while(playerX > runeX+2):
-            if(playerX < playerX+25):
-                interval = 0.1
             pressKey(LEFT)
-            time.sleep(interval)
-            releaseKey(LEFT)
+            if not (playerX < playerX+25):
+                flashJump()
             playerX,playerY = findPlayer()
+        releaseKey(LEFT)
     time.sleep(0.5)
     while(playerY > runeY+2 or playerY < runeY-2):
         if(playerY < runeY):
@@ -178,38 +182,37 @@ def moveRune():
             playerX,playerY = findPlayer()
 
 def returnToPosition():
+    print("going back")
     global RUNE_EXIST
     goToFloor()
         #0 = same pos, 1= player right of rune, 2=player left of rune
     player_to_saved = 0 
     playerX,playerY = findPlayer()
-    interval = 2.0
     if PLAYERX_SAVED < playerX:
         player_to_saved = 1
     elif PLAYERX_SAVED > playerX:
         player_to_saved = 2
     if player_to_saved == 2:
         while(playerX < PLAYERX_SAVED-2):
-            if(playerX > PLAYERX_SAVED-25):
-                interval = 0.1
             pressKey(RIGHT)
-            time.sleep(interval)
-            releaseKey(RIGHT)
+            print(playerX,PLAYERX_SAVED)
+            if not (playerX > PLAYERX_SAVED-25): 
+                flashJump()
             playerX,playerY = findPlayer()
+        releaseKey(RIGHT)
         pressKey(LEFT)
-        time.sleep(interval)
+        time.sleep(0.1)
         releaseKey(LEFT)
     elif player_to_saved == 1:
         while(playerX > PLAYERX_SAVED+2):
             print(playerX,PLAYERX_SAVED)
-            if(playerX < playerX+25):
-                interval = 0.1
             pressKey(LEFT)
-            time.sleep(interval)
-            releaseKey(LEFT)
+            if not (playerX < PLAYERX_SAVED+25):
+                flashJump()
             playerX,playerY = findPlayer()
+        releaseKey(LEFT)
         pressKey(RIGHT)
-        time.sleep(interval)
+        time.sleep(0.1)
         releaseKey(RIGHT)
     time.sleep(0.5)
     while(playerY > PLAYERY_SAVED+2 or playerY < PLAYERY_SAVED-2):
@@ -260,14 +263,12 @@ def main():
     PLAYERX_SAVED,PLAYERY_SAVED = findPlayer()
     sleepTime = 1
     while(BOT_STATUS == 1):
-        print("test")
         if(RUNE_EXIST == 1):
             sleepTime = 1
         else:
             sleepTime = 1
         time.sleep(sleepTime)
         if(findRune() != None):
-            print("rune found")
             RUNE_EXIST = 1
             toggleMacro()
             time.sleep(0.5)
@@ -291,8 +292,8 @@ def placeholder_start():
 @bot.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(bot))
-    await bot.get_channel(int("874272449141813303")).send("bot is online")
-    await bot.get_channel(int("874272449141813303")).send(file=discord.File('images/captureimg.png'))
+    await bot.get_channel(int(CHANNEL_ID)).send("bot is online")
+    await bot.get_channel(int(CHANNEL_ID)).send(file=discord.File('images/captureimg.png'))
 
 @bot.command(name='lanjiao')
 async def discordlanjiao(ctx):
