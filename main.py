@@ -1,8 +1,10 @@
+from PIL.Image import NONE
 import pyautogui
 import win32gui
 import ctypes
 import time
-from telegram.ext import Updater, CommandHandler
+from telegram.ext import Updater
+from telegram.ext import CommandHandler
 SCREEN_X1 = 0
 SCREEN_X2 = 0
 SCREEN_Y1 = 0
@@ -12,8 +14,20 @@ MAPLE_X2 = 0
 MAPLE_Y1 = 0
 MAPLE_Y2 = 0
 MAPLE_NAME = "Swordie"
+PLAYERX_SAVED = 0
+PLAYERY_SAVED = 0
+RUNE_EXIST = False
+BOT_STATUS = 0
+chatid = ''
 
 
+#Token = bot token
+#will try to make this dynamic sooner or later, currently static
+updater = Updater(token='1943796758:AAEIOnVHudYvaXieLICpDVStbBHNpjPcIbs', use_context=True)
+dispatcher = updater.dispatcher
+updater.start_polling()
+print("Telegram bot is now listening, type /start to the bot to begin watching")
+#end of tokens
 
 SendInput = ctypes.windll.user32.SendInput
 
@@ -23,6 +37,7 @@ DOWN = 0xD0
 LEFT = 0xCB
 RIGHT = 0xCD
 SPACE = 0x39
+F10 = 0x44
 
 N = 0x31
 LCTRL = 0x1D
@@ -131,18 +146,17 @@ def ropeLift():
 
 def moveRune():
     #0 = same pos, 1= player right of rune, 2=player left of rune
+    goToFloor()
     player_to_rune = 0 
     playerX,playerY = findPlayer()
     runeX,runeY = findRune()
     interval = 2.0
-    print("Rune Location : ",findRune())
-    print("Player location: ",findPlayer())
     if runeX < playerX:
         player_to_rune = 1
     elif runeX > playerX:
         player_to_rune = 2
     if player_to_rune == 2:
-        while(playerX < runeX-4):
+        while(playerX < runeX-2):
             if(playerX > runeX-25):
                 interval = 0.1
             pressKey(RIGHT)
@@ -150,7 +164,7 @@ def moveRune():
             releaseKey(RIGHT)
             playerX,playerY = findPlayer()
     elif player_to_rune == 1:
-        while(playerX > runeX+4):
+        while(playerX > runeX+2):
             if(playerX < playerX+25):
                 interval = 0.1
             pressKey(LEFT)
@@ -160,27 +174,224 @@ def moveRune():
     time.sleep(0.5)
     while(playerY > runeY+2 or playerY < runeY-2):
         if(playerY < runeY):
-            print("rune too low" )
             downJump()
             time.sleep(0.5)
             playerX,playerY = findPlayer()
-            print(playerY,runeY)
         elif(playerY > runeY):
-            print("rune too high")
             ropeLift()
             time.sleep(3)
             playerX,playerY = findPlayer()
-            print(playerY,runeY)
+
+def returnToPosition():
+    global RUNE_EXIST
+    goToFloor()
+        #0 = same pos, 1= player right of rune, 2=player left of rune
+    player_to_saved = 0 
+    playerX,playerY = findPlayer()
+    interval = 2.0
+    if PLAYERX_SAVED < playerX:
+        player_to_saved = 1
+    elif PLAYERX_SAVED > playerX:
+        player_to_saved = 2
+    if player_to_saved == 2:
+        while(playerX < PLAYERX_SAVED-2):
+            if(playerX > PLAYERX_SAVED-25):
+                interval = 0.1
+            pressKey(RIGHT)
+            time.sleep(interval)
+            releaseKey(RIGHT)
+            playerX,playerY = findPlayer()
+        pressKey(LEFT)
+        time.sleep(interval)
+        releaseKey(LEFT)
+    elif player_to_saved == 1:
+        while(playerX > PLAYERX_SAVED+2):
+            print(playerX,PLAYERX_SAVED)
+            if(playerX < playerX+25):
+                interval = 0.1
+            pressKey(LEFT)
+            time.sleep(interval)
+            releaseKey(LEFT)
+            playerX,playerY = findPlayer()
+        pressKey(RIGHT)
+        time.sleep(interval)
+        releaseKey(RIGHT)
+    time.sleep(0.5)
+    while(playerY > PLAYERY_SAVED+2 or playerY < PLAYERY_SAVED-2):
+        if(playerY < PLAYERY_SAVED+2):
+            downJump()
+            time.sleep(0.5)
+            playerX,playerY = findPlayer()
+        elif(playerY > PLAYERY_SAVED-2):
+            ropeLift()
+            time.sleep(3)
+            playerX,playerY = findPlayer()
+    RUNE_EXIST = 0
+    time.sleep(0.5)
+    toggleMacro()
+
+
 
 def sendRuneImg():
     pressKey(N)
     time.sleep(0.5)
     releaseKey(N)
+    captureimg(chatid,'dorune')
+
+def goToFloor():
+    while(True):
+        playerX,playerY = findPlayer()
+        downJump()
+        newPlayerX,newPlayerY = findPlayer()
+        if(playerY == newPlayerY):
+            break
+
+
+
+
+#start of captureimg cmd
+def captureimg(chatid,capturetype):
+    myScreenshot= pyautogui.screenshot('images/captureimg.png')
+    updater.bot.sendPhoto(chat_id=chatid,photo=open("images/captureimg.png",'rb'))
+    if (capturetype=='dorune'):
+        updater.bot.send_message(chat_id=chatid, text="Rune Found!")
+        updater.bot.send_message(chat_id=chatid, text="Please input the following")
+        updater.bot.send_message(chat_id=chatid, text="based on the arrow keys: UP - U, Down - D, Left - L, Right - R")
+        updater.bot.send_message(chat_id=chatid, text="Example, /solve R R L L")
+
+    elif(capturetype=='checkrune'):
+        updater.bot.send_message(chat_id=chatid, text="Please check if the rune has been solved.")
+        updater.bot.send_message(chat_id=chatid, text="If the rune has not been solved, run /solve <DIRECTIONS> again.")
+        updater.bot.send_message(chat_id=chatid, text="If rune is solved, type /done to go back to position")
+
+    elif(capturetype=='back in position'):
+        updater.bot.send_message(chat_id=chatid, text="Back in Position")
+
+#end of captureimg cmd
+
+#/start command
+def start(update, context):
+    global BOT_STATUS
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Runebot is starting Now.")
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Position saved")
+    #context.bot.send_message(chat_id=update.effective_chat.id, text="Please run /dorune after reaching rune.")
+    user = update.message.from_user
+    changechatid(user['id'])
+    BOT_STATUS = 1
+    main()
+start_handler = CommandHandler('start', start)
+dispatcher.add_handler(start_handler)    
+#end of /start command
+
+#/dorune command
+def dorune(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Opening Rune...")
+    sendRuneImg()
+dorune_handler = CommandHandler('dorune', dorune)
+dispatcher.add_handler(dorune_handler)    
+#end of /dorune command
+
+def done(update, context):
+    global RUNE_EXIST
+    returnToPosition()
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Returning to position")
+    RUNE_EXIST = 0
+dispatcher.add_handler(CommandHandler("done",done)) 
+
+#rune solving /solve command
+def runesolve(update,context):
+    try:
+        action1=str(context.args[0])
+        action2=str(context.args[1])
+        action3=str(context.args[2])
+        action4=str(context.args[3])
+        result = action1+action2+action3+action4
+        update.message.reply_text(str(result))
+        
+        pressKey(convertaction(action1))
+        time.sleep(0.3)
+        releaseKey(convertaction(action1))
+
+        pressKey(convertaction(action2))
+        time.sleep(0.3)
+        releaseKey(convertaction(action2))
+
+        pressKey(convertaction(action3))
+        time.sleep(0.3)
+        releaseKey(convertaction(action3))
+
+        pressKey(convertaction(action4))
+        time.sleep(0.3)
+        releaseKey(convertaction(action4))
+        time.sleep(0.5)
+        captureimg(chatid,'checkrune')
+
+    except(IndexError,ValueError):
+        update.message.reply_text('wrong input, Example, /solve R R L L')
+
+dispatcher.add_handler(CommandHandler('solve',runesolve))
+
+def convertaction(action):
+    if(action == 'R') :
+        return RIGHT
+
+    elif(action =='L'):
+         return LEFT
+    
+    elif(action =='U'):
+         return UP
+    
+    elif(action =='D'):
+         return DOWN
+#end of rune solving command
+
+
+
+#/reporight command
+def reporight(update, context):
+    context.bot.send_message(chat_id=update.effective_chat.id, text="Repositioning to the right")
+    #repositionright()
+    captureimg(chatid,'back in position')
+
+reporight_handler = CommandHandler('reporight', reporight)
+dispatcher.add_handler(reporight_handler)
+#end of /reporight command
+
+def changechatid(inputchatid):
+    global chatid
+    chatid = inputchatid
 
 def main():
+    global PLAYERX_SAVED
+    global PLAYERY_SAVED
+    global RUNE_EXIST
+    PLAYERX_SAVED,PLAYERY_SAVED = findPlayer()
+    sleepTime = 1
+    while(BOT_STATUS == 1):
+        print("test")
+        if(RUNE_EXIST == 1):
+            sleepTime = 1
+        else:
+            sleepTime = 1
+        time.sleep(sleepTime)
+        if(findRune() != None):
+            print("rune found")
+            RUNE_EXIST = 1
+            toggleMacro()
+            time.sleep(0.5)
+            moveRune()
+            time.sleep(0.5)
+            sendRuneImg()
+    
+
+def toggleMacro():
+    pyautogui.keyDown('f10')
+    time.sleep(0.5) #to be made adaptive
+    pyautogui.keyUp('f10')
+
+
+def placeholder_start():
     moveRune()
     time.sleep(0.5)
-    sendRuneImg()
-
-if __name__ == "__main__":
-    main()
+    captureimg(chatid,'checkposition')
+    
