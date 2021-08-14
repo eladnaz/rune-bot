@@ -3,8 +3,14 @@ import pyautogui
 import win32gui
 import ctypes
 import time
+import sys
 import discord
+import subprocess
+from datetime import date
 from discord.ext import commands
+import firebase_admin
+from firebase_admin import credentials
+from firebase_admin import firestore
 SCREEN_X1 = 0
 SCREEN_X2 = 0
 SCREEN_Y1 = 0
@@ -19,13 +25,50 @@ PLAYERY_SAVED = 0
 RUNE_EXIST = False
 BOT_STATUS = 0
 CHANNEL_ID = "876090831356952596"
-chatid = ''
 client = discord.Client()
-Token ='ODc2MDkxNDE0OTQ0MDM0ODU2.YRfBtg.ekYuxDhZhGZfUVhWm3CAOsIgC90'
+Token =''
 currentuser = 'pull'
+authencode = '6969696969'
 bot = commands.Bot(command_prefix=currentuser)
 
 SendInput = ctypes.windll.user32.SendInput
+
+# initializate AUTHENTICATION
+cred = credentials.Certificate('firebase-sdk.json')
+firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+doc_ref = db.collection('authenusers')
+hwid = subprocess.check_output('wmic csproduct get uuid').decode().split('\n')[1].strip()
+
+docs = doc_ref.stream()
+
+for doc in docs:
+    print('{} => {} '.format(doc.id, doc.to_dict()))
+    if authencode ==doc.id:
+        #print ('authenticated')
+        #print ('hwid')
+        set_ref = db.collection('authenusers').document(doc.id)
+        set_ref.set({
+            'hwid':hwid
+        })
+        log_ref = db.collection('logs')
+        log_ref.add({
+            'authencode':authencode,
+            'hwid':hwid,
+            'datetime':firestore.SERVER_TIMESTAMP
+        })
+
+    else:
+        print('ure a fucker')
+        logfailentry_ref = db.collection('failedlogs')
+        logfailentry_ref.add({
+            'authencode':authencode,
+            'hwid':hwid,
+            'datetime':firestore.SERVER_TIMESTAMP
+        })
+        sys.exit()
+
 
 
 UP = 0xC8
