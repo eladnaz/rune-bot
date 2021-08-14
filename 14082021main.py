@@ -6,35 +6,93 @@ import time
 import sys
 import discord
 import subprocess
-from datetime import date
 from discord.ext import commands
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
-SCREEN_X1 = 0
-SCREEN_X2 = 0
-SCREEN_Y1 = 0
-SCREEN_Y2 = 0
-MAPLE_X1 = 0
-MAPLE_X2 = 0
-MAPLE_Y1 = 0
-MAPLE_Y2 = 0
-MAPLE_NAME = "Swordie"
+import configparser
+import pygetwindow as pgw
+FIREBASE_JSON = {
+  "type": "service_account",
+  "project_id": "cock-rune",
+  "private_key_id": "e60b89da0d048a414ddbc9cd688558e6a1821a52",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQC+Q7hMsfchaOsc\nELUizGK0HHtCRUwvXeA8QTl7O0vKsAKU98eBaEFQilVkKOtTg3A72hWgIlD4BFuV\nBVcAfMJoooZx1geUBBgSL723QJh5aY9h+lGdFeRjcHYlYHcouXkOUb0kweIhHXUt\n1RZCTv74NGJXTJaSW8BPuRZUQ+6Ei3EG+G7IQ2gh4rJIjPDmzTWK1SggynX28UI4\n2huNWRm2DwJieLsYroopg+qqXdUAoNnTCEFlDH2IZLJ0ad0htWCyLbGnRx7Lja84\n45k+MPBGiN3EQnrssygNoeCjhJk7VIf71jXhcJtdCUHzBPd4eWZa5VLh5r17AE/x\n7FG4HdLxAgMBAAECggEACLY/b0eWKhyh6Kg9MF7icB5+aFjq9Z+bSmGu2PKB9Gxz\nGdDEp6tsk4cEr5rjYkYPnWCi19u/uwjcC//xbWTJCWh+YSJXONL9KoFZcwAisICB\ntQ9KAw2DESiPna4ulpnzgzvWk3h15bqcaHZW2BTCPlQ2YoqaZGY4xo2834E4H9p8\nZ4Gho8B7tVOVnn+z8AdCXCra1xTYPLC4a2q/DO7spMmp60ZhC5Nl209tmSMnIKuL\nSXg10yk+BgCVfx0IqtpzIfzYYG4ISIcgc7CRSfDiQUeUaWIEOd4Aj6J77UBq+E0i\napyCaPoGLXvd0edDXYx19tYh9PLl7VuTEEBge4+PVwKBgQDvJ1rQnZydtmz4+/c3\nJIixFYPXxJ5fgUuahTrIOOum6Kx87guMkq0+pdk6TYOqyy/qKIsQE0aPkGXIgZQA\n7eWDZkOdE5vnq28yG/Ki0YO7BzGgaVecGTDHaNLxgMbwtyCVFL0uk4vO2Mv15bnD\nX9Dk+oFPwtxJJH6HyMpetpszOwKBgQDLqr/FmpTdZzZJWgIEdMaGTHbkZFT7Enpv\ntmxl/04MRTud32+rylCCv6+sUbKoe2xOAMer2Wjl25Bzw4ALDAiRbuSpGxsJv/RR\nrXuJJGPwUUi8JIZET9tnfD1gXTg6tEe8fzJrqHSeJmxrQJJtp1p5ciB277TUD9sx\nbvMNNyqXwwKBgHKueZMecZMDfuAq25K61z2r5oxageOked/AUb7f5MkmPEiwUiN3\n1tH6799Qeno1c2WjSYRM6gJAKT7sPE/xxKStLnEtjQ6cG/d4hXLka3oNahPVUCjP\nv59wOe+LZFrcRiiXSF0Ebf+j4LKrFdiFowOayNW5yK7ebDqq47hlcqkvAoGBAJ+y\nV4TeXPPuRkbl6McNucz8kA0uDuR/7LlD1WN0+QHuF30HAk016kNbgqgft3MctCPF\nwMsjQnlZ3L6pAPGokd9XkLx4oI7YkP6qhT9X5XU+h0XfbdiKtYNDi+zPq5N8YPOQ\n2TxJbofDoSfIDgklPHAV6RbZhnTxqfHtCW/HXgJ5AoGBAJ5J27yDjBvGBewogtgt\nRZ3XWEvhLDovALNpKein3AlnErEo7lkzorlMXon+u5NZ2qFJjFuNTbuKek3La1Ap\ne8iVxaIl9JnRaIFHeMZzhFcz+9ODydIHgbxbx8u2KMulX/uwL+r1LxvGKbSS5+qE\ncPPadeItZqTXsn5wE6Z8Ba8P\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-2h2l4@cock-rune.iam.gserviceaccount.com",
+  "client_id": "102033677986236482170",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-2h2l4%40cock-rune.iam.gserviceaccount.com"
+}
+MAPLE_NAME = ''
 PLAYERX_SAVED = 0
 PLAYERY_SAVED = 0
 RUNE_EXIST = False
 BOT_STATUS = 0
-CHANNEL_ID = "876090831356952596"
+CHANNEL_ID = ""
+ROPE_LIFT = ""
+JUMP = ""
+INTERACT = ""
+PLAY_PAUSE = ""
+MACRO_HYBRID = ""
 client = discord.Client()
-Token =''
-currentuser = 'pull'
-authencode = '6969696969'
-bot = commands.Bot(command_prefix=currentuser)
+BOT_TOKEN =''
+CURRENT_USER = ''
+APP_AUTH = ''
+MAPLE_WIN = None
+KEYSCAN_DICT = {'LCTRL':0x1D,
+             'MINUS':0x0C,
+             'EQUAL':0x0D,
+             'P':0x19,
+             'F':0x21,
+             'Q':0x10,
+             'LALT':0x38,
+             'SPACE':0x39,
+             'N':0x31,
+             'Y':0x15,
+             'F9':0x43,
+             'F10':0x44,
+             'F11':0x57,
+             'F12':0x58}
+
+MACRO_DICT = {'LCTRL':'ctrlleft',
+             'MINUS':'-',
+             'EQUAL':'=',
+             'SPACE':'space',
+             'P':'p',
+             'F':'f',
+             'Q':'q',
+             'LALT':'altleft',
+             'N':'n',
+             'Y':'y',
+             'F9':'f9',
+             'F10':'f10',
+             'F11':'f11',
+             'F12':'f12'}
+
+config = configparser.ConfigParser()
+try:
+    config.read('config.ini')
+except Exception as e:
+    sys.exit()
+finally:
+    MAPLE_NAME = config['USER']['MAPLE_NAME']
+    BOT_TOKEN = config['USER']['BOT_TOKEN']
+    CHANNEL_ID = config['USER']['CHANNEL_ID']
+    CURRENT_USER = config['USER']['CURRENT']
+    APP_AUTH = config['USER']['AUTH_CODE']
+    ROPE_LIFT = config['USER']['ROPE_LIFT']
+    JUMP = config['USER']['JUMP']
+    INTERACT = config['USER']['INTERACT']
+    PLAY_PAUSE = config['USER']['PLAY_PAUSE']
+    MACRO_HYBRID = config['USER']['MACRO_HYBRID']
+
+bot = commands.Bot(command_prefix=CURRENT_USER)
 
 SendInput = ctypes.windll.user32.SendInput
 
 # initializate AUTHENTICATION
-cred = credentials.Certificate('firebase-sdk.json')
+cred = credentials.Certificate(FIREBASE_JSON)
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 
@@ -45,7 +103,8 @@ docs = doc_ref.stream()
 
 for doc in docs:
     print('{} => {} '.format(doc.id, doc.to_dict()))
-    if authencode ==doc.id:
+    print(APP_AUTH)
+    if APP_AUTH ==doc.id:
         #print ('authenticated')
         #print ('hwid')
         set_ref = db.collection('authenusers').document(doc.id)
@@ -54,29 +113,28 @@ for doc in docs:
         })
         log_ref = db.collection('logs')
         log_ref.add({
-            'authencode':authencode,
+            'authencode':APP_AUTH,
             'hwid':hwid,
             'datetime':firestore.SERVER_TIMESTAMP
         })
-
+        break
     else:
         print('ure a fucker')
         logfailentry_ref = db.collection('failedlogs')
         logfailentry_ref.add({
-            'authencode':authencode,
+            'authencode':APP_AUTH,
             'hwid':hwid,
             'datetime':firestore.SERVER_TIMESTAMP
         })
         sys.exit()
 
-
+MAPLE_WIN = pgw.getWindowsWithTitle(MAPLE_NAME)[0]
+MAPLE_WIN.moveTo(0,0)
 
 UP = 0xC8
 DOWN = 0xD0
 LEFT = 0xCB
 RIGHT = 0xCD
-SPACE = 0x39
-F10 = 0x44
 
 N = 0x31
 LCTRL = 0x1D
@@ -170,24 +228,28 @@ def findPlayer():
 
 #----------------PLAYER MOVEMENTS--------------#
 def downJump():
+    print(KEYSCAN_DICT[JUMP])
+    key = KEYSCAN_DICT[JUMP]
     pressKey(DOWN)
     time.sleep(0.5)
-    pressKey(SPACE)
+    pressKey(key)
     time.sleep(0.5)
     releaseKey(DOWN)
     time.sleep(0.5)
-    releaseKey(SPACE)
+    releaseKey(key)
 
 def ropeLift():
-    pressKey(LCTRL)
+    key = KEYSCAN_DICT[ROPE_LIFT]
+    pressKey(key)
     time.sleep(0.5)
-    releaseKey(LCTRL)
+    releaseKey(key)
 
 def flashJump():
-    pressKey(SPACE)
-    print("JUMP")
+    print(KEYSCAN_DICT[JUMP])
+    key = KEYSCAN_DICT[JUMP]
+    pressKey(key)
     time.sleep(0.1)
-    releaseKey(SPACE)
+    releaseKey(key)
 
 def moveRune():
     #0 = same pos, 1= player right of rune, 2=player left of rune
@@ -223,6 +285,7 @@ def moveRune():
             ropeLift()
             time.sleep(3)
             playerX,playerY = findPlayer()
+    print("rune reached")
 
 def returnToPosition():
     print("going back")
@@ -272,9 +335,10 @@ def returnToPosition():
     toggleMacro()
 
 def pressRune():
-    pressKey(N)
+    key = KEYSCAN_DICT[INTERACT]
+    pressKey(key)
     time.sleep(0.5)
-    releaseKey(N)
+    releaseKey(key)
     #captureimg(chatid,'dorune')
 
 def goToFloor():
@@ -318,18 +382,19 @@ def main():
             moveRune()
             time.sleep(0.5)
             pressRune()
- #temporary fix for one way communication
 
 def toggleMacro():
-    pyautogui.keyDown('f10')
-    time.sleep(0.5) #to be made adaptive
-    pyautogui.keyUp('f10')
+    key = MACRO_DICT[PLAY_PAUSE]
+    if(MACRO_HYBRID == "TRUE"):
+        keyArr = PLAY_PAUSE.split("+")
+        keyOne = MACRO_DICT[keyArr[0]]
+        keyTwo = MACRO_DICT[keyArr[1]]
+        pyautogui.hotkey(keyOne,keyTwo)
+    else:
+        pyautogui.keyDown(key)
+        time.sleep(0.5) #to be made adaptive
+        pyautogui.keyUp(key)
 
-
-def placeholder_start():
-    moveRune()
-    time.sleep(0.5)
-    #captureimg(chatid,'checkposition')
     
 #------------- DISCORD Region --------------------#
 @bot.event
@@ -346,17 +411,21 @@ async def discordlanjiao(ctx):
 @bot.command(name='start')
 async def discordstart(ctx):
     global BOT_STATUS
-    await ctx.send('RuneBot is starting for '+currentuser)
+    await ctx.send('RuneBot is starting for '+CURRENT_USER)
     BOT_STATUS = 1
     try: 
         main()
     except Exception as e:
-        print ("fuckingfailed",e)
+        if hasattr(e,'message'):
+            print(e.message)
+        else:
+            print('fucking failed')
+            print(e)
     finally:
         myScreenshot= pyautogui.screenshot('images/captureimg.png')
         await ctx.send(file=discord.File('images/captureimg.png'))
         await ctx.send("Please input the following, based on the arrow keys: UP - U, Down - D, Left - L, Right - R")
-        await ctx.send("Example, shinobusolve R R L L")
+        await ctx.send("Example, kotorisolve R R L L")
 
 @bot.command(name='dorune')
 async def discorddorune(ctx):
@@ -365,7 +434,7 @@ async def discorddorune(ctx):
     myScreenshot= pyautogui.screenshot('images/captureimg.png')
     await ctx.send(file=discord.File('images/captureimg.png'))
     await ctx.send("Please input the following, based on the arrow keys: UP - U, Down - D, Left - L, Right - R")
-    await ctx.send("Example, shinobusolve R R L L")
+    await ctx.send("Example, kotorisolve R R L L")
 
 @bot.command(name='done')
 async def discorddone(ctx):
@@ -427,81 +496,7 @@ async def discordpositionalfix(ctx):
     await ctx.send(file=discord.File('images/captureimg.png'))
     await ctx.send('back in position')
 
-bot.run(Token)
+bot.run(BOT_TOKEN)
 #------------- DISCORD Region --------------------#
 
 
-# #/start command
-# def start(update, context):
-#     global BOT_STATUS
-#     context.bot.send_message(chat_id=update.effective_chat.id, text="Runebot is starting Now.")
-#     context.bot.send_message(chat_id=update.effective_chat.id, text="Position saved")
-#     #context.bot.send_message(chat_id=update.effective_chat.id, text="Please run /dorune after reaching rune.")
-#     user = update.message.from_user
-#     changechatid(user['id'])
-#     BOT_STATUS = 1
-#     main()
-# start_handler = CommandHandler('start', start)
-# dispatcher.add_handler(start_handler)    
-# #end of /start command
-
-# #/dorune command
-# def dorune(update, context):
-#     context.bot.send_message(chat_id=update.effective_chat.id, text="Opening Rune...")
-#     sendRuneImg()
-# dorune_handler = CommandHandler('dorune', dorune)
-# dispatcher.add_handler(dorune_handler)    
-# #end of /dorune command
-
-# def done(update, context):
-#     global RUNE_EXIST
-#     returnToPosition()
-#     context.bot.send_message(chat_id=update.effective_chat.id, text="Returning to position")
-#     RUNE_EXIST = 0
-# dispatcher.add_handler(CommandHandler("done",done)) 
-
-#rune solving /solve command
-# def runesolve(update,context):
-#     try:
-#         action1=str(context.args[0])
-#         action2=str(context.args[1])
-#         action3=str(context.args[2])
-#         action4=str(context.args[3])
-#         result = action1+action2+action3+action4
-#         update.message.reply_text(str(result))
-        
-#         pressKey(convertaction(action1))
-#         time.sleep(0.3)
-#         releaseKey(convertaction(action1))
-
-#         pressKey(convertaction(action2))
-#         time.sleep(0.3)
-#         releaseKey(convertaction(action2))
-
-#         pressKey(convertaction(action3))
-#         time.sleep(0.3)
-#         releaseKey(convertaction(action3))
-
-#         pressKey(convertaction(action4))
-#         time.sleep(0.3)
-#         releaseKey(convertaction(action4))
-#         time.sleep(0.5)
-#         captureimg(chatid,'checkrune')
-
-#     except(IndexError,ValueError):
-#         update.message.reply_text('wrong input, Example, /solve R R L L')
-
-# dispatcher.add_handler(CommandHandler('solve',runesolve))
-#end of rune solving command
-
-
-
-# #/reporight command
-# def reporight(update, context):
-#     context.bot.send_message(chat_id=update.effective_chat.id, text="Repositioning to the right")
-#     #repositionright()
-#     captureimg(chatid,'back in position')
-
-# reporight_handler = CommandHandler('reporight', reporight)
-# dispatcher.add_handler(reporight_handler)
-# #end of /reporight command
