@@ -33,12 +33,13 @@ JUMP = ""
 INTERACT = ""
 PLAY_PAUSE = ""
 MACRO_HYBRID = ""
-client = discord.Client()
 BOT_TOKEN =''
 CURRENT_USER = ''
 APP_AUTH = ''
 TIME_INTERVAL = ''
 MAPLE_WIN = None
+RUNEY = 0
+RUNEX = 0
 KEYSCAN_DICT = {'LCTRL':0x1D,
              'MINUS':0x0C,
              'EQUAL':0x0D,
@@ -87,7 +88,9 @@ finally:
     MACRO_HYBRID = config['USER']['MACRO_HYBRID']
     TIME_INTERVAL = config['USER']['TIME_INTERVAL']
 
-bot = commands.Bot(command_prefix=CURRENT_USER)
+if BOT_STATUS == 0:
+    client = discord.Client()
+    bot = commands.Bot(command_prefix=CURRENT_USER)
 
 SendInput = ctypes.windll.user32.SendInput
 print("Attempting Authentication")
@@ -102,11 +105,8 @@ hwid = subprocess.check_output('wmic csproduct get uuid').decode().split('\n')[1
 docs = doc_ref.stream()
 exit_status = 1
 for doc in docs:
-    print('{} => {} '.format(doc.id, doc.to_dict()))
     if APP_AUTH==doc.id:
         db.collection('authenusers').document(doc.id)
-        print ('authenticated')
-        print ('hwid')
         exit_status = 0
         set_ref = db.collection('authenusers').document(doc.id)
         set_ref.set({
@@ -129,16 +129,15 @@ for doc in docs:
             'datetime':firestore.SERVER_TIMESTAMP
         })
         break
-    else:
-        print('ure a fucker')
-        logfailentry_ref = db.collection('failedlogs')
-        logfailentry_ref.add({
+
+if(exit_status == 1):
+    print('ure a fucker')
+    logfailentry_ref = db.collection('failedlogs')
+    logfailentry_ref.add({
             'authencode':APP_AUTH,
             'hwid':hwid,
             'datetime':firestore.SERVER_TIMESTAMP
         })
-
-if(exit_status == 1):
     sys.exit()
 
 print("Authenticated")
@@ -204,16 +203,23 @@ ctypes.pointer(extra) )
 
 #----------------- LOCATION HANDLERS ------------------#
 def findRune():
-    rune_status = 1
-    rune_loc = 0
-    try:
-        rune_loc = pyautogui.locateOnScreen('images/minirunev3.png',confidence=0.8,region=(0,0,330,220))
-    except Exception as e:
-        rune_status = 0 
-        print("Rune not found,",e)
-    finally:
-        if rune_status == 1:
-            return rune_loc.left,rune_loc.top
+    global RUNE_EXIST
+    global RUNEX
+    global RUNEY
+    if(RUNE_EXIST == 0):
+        rune_loc = 0
+        try:
+            rune_loc = pyautogui.locateOnScreen('images/minirunev3.png',confidence=0.8,region=(0,0,330,220))
+        except Exception as e:
+            rune_status = 0 
+            print("Rune not found,",e)
+        finally:
+            if rune_loc is None:
+                print("Rune not found!")
+            else:
+                RUNE_EXIST = 1
+                print("Rune found!")
+                RUNEX,RUNEY = rune_loc.left,rune_loc.top
 
 def findPlayer():
     player_status = 1
@@ -224,8 +230,10 @@ def findPlayer():
         player_status = 0
         print("Player not found",e)
     finally:
-        if player_status == 1:
-            return player_loc.left, player_loc.top
+        if player_loc is None:
+            print("Player not found")
+        else:
+            return player_loc.left,player_loc.top
 
 #----------------PLAYER MOVEMENTS--------------#
 def downJump():
@@ -250,41 +258,41 @@ def flashJump():
     time.sleep(0.1)
     releaseKey(key)
 
-def moveRune():
+async def moveRune():
     #0 = same pos, 1= player right of rune, 2=player left of rune
     goToFloor()
     player_to_rune = 0 
     playerX,playerY = findPlayer()
-    runeX,runeY = findRune()
-    if runeX < playerX:
+    if RUNEX < playerX:
         player_to_rune = 1
-    elif runeX > playerX:
+    elif RUNEX > playerX:
         player_to_rune = 2
     if player_to_rune == 2:
-        while(playerX < runeX-2):
+        while(playerX < RUNEX-2):
             pressKey(RIGHT)
-            if not (playerX > runeX-25):
+            if not (playerX > RUNEX-25):
                 flashJump()
             playerX,playerY = findPlayer()
         releaseKey(RIGHT)
     elif player_to_rune == 1:
-        while(playerX > runeX+2):
+        while(playerX > RUNEX+2):
             pressKey(LEFT)
-            if not (playerX < runeX+25):
+            if not (playerX < RUNEX+25):
                 flashJump()
             playerX,playerY = findPlayer()
         releaseKey(LEFT)
     time.sleep(0.5)
-    while(playerY > runeY+2 or playerY < runeY-2):
-        if(playerY < runeY):
+    while(playerY > RUNEY+2 or playerY < RUNEY-2):
+        if(playerY < RUNEY):
             downJump()
             time.sleep(0.5)
             playerX,playerY = findPlayer()
-        elif(playerY > runeY):
+        elif(playerY > RUNEY):
             ropeLift()
             time.sleep(3)
             playerX,playerY = findPlayer()
     print("Reached the rune!")
+    await discordsendrune()
 
 def returnToPosition():
     print("Going back to position")
@@ -346,7 +354,6 @@ def goToFloor():
             break
 
 def convertaction(action):
-    action = str(action).upper
     if(action == 'R') :
         return RIGHT
 
@@ -360,33 +367,30 @@ def convertaction(action):
          return DOWN
 
 
-def main():
+async def main():
     global PLAYERX_SAVED
     global PLAYERY_SAVED
     global RUNE_EXIST
     PLAYERX_SAVED,PLAYERY_SAVED = findPlayer()
-    sleepTime = 1
-    while(BOT_STATUS == 1):
+    sleepTime = int(TIME_INTERVAL)
+    while(RUNE_EXIST == 0):
+        findRune()
         if(RUNE_EXIST == 1):
-            sleepTime = 1
-        else:
-            sleepTime = int(TIME_INTERVAL)
-        time.sleep(sleepTime)
-        if(findRune() != None):
-            RUNE_EXIST = 1
             toggleMacro()
             time.sleep(0.5)
-            moveRune()
+            await moveRune()
             time.sleep(0.5)
+        else:
+            time.sleep(sleepTime)
 
 def toggleMacro():
-    key = MACRO_DICT[PLAY_PAUSE]
     if(MACRO_HYBRID == "TRUE"):
         keyArr = PLAY_PAUSE.split("+")
         keyOne = MACRO_DICT[keyArr[0]]
         keyTwo = MACRO_DICT[keyArr[1]]
         pyautogui.hotkey(keyOne,keyTwo)
     else:
+        key = MACRO_DICT[PLAY_PAUSE]
         pyautogui.keyDown(key)
         time.sleep(0.5) #to be made adaptive
         pyautogui.keyUp(key)
@@ -396,12 +400,12 @@ def toggleMacro():
 @bot.event
 async def on_ready():
     print('We have logged in as {0.user}'.format(bot))
-    await bot.get_channel(int(CHANNEL_ID)).send("bot is online")
-    await bot.get_channel(int(CHANNEL_ID)).send(file=discord.File('images/captureimg.png'))
+    await bot.get_channel(int(CHANNEL_ID)).send("Bot is online")
+    await bot.get_channel(int(CHANNEL_ID)).send("Type <ign>start to have the bot start scanning")
 
 @bot.command(name='lanjiao')
 async def discordlanjiao(ctx):
-    myScreenshot= pyautogui.screenshot('images/captureimg.png')
+    myScreenshot= pyautogui.screenshot('images/captureimg.png',region=(0,0,1366,768))
     await ctx.send(file=discord.File('images/captureimg.png'))
 
 @bot.command(name='start')
@@ -410,55 +414,56 @@ async def discordstart(ctx):
     await ctx.send('RuneBot is starting for '+CURRENT_USER)
     await ctx.send('It will scan every '+ TIME_INTERVAL + ' seconds')
     BOT_STATUS = 1
-    try: 
-        main()
-    except Exception as e:
-        if hasattr(e,'message'):
-            print(e.message)
-        else:
-            print('The program is goofing but it still works ):')
-            print(e)
-    finally:
-        myScreenshot= pyautogui.screenshot('images/captureimg.png')
-        await ctx.send(file=discord.File('images/captureimg.png'))
-        await ctx.send("Check if you've reached the rune, run <ign>dorune if you are")
-        await ctx.send("If you aren't, run <ign>gorune")
+    await main()
 
-@bot.command(name='gorune')
+async def discordsendrune():
+    myScreenshot= pyautogui.screenshot('images/captureimg.png',region=(0,0,1366,768))
+    await bot.get_channel(int(CHANNEL_ID)).send(file=discord.File('images/captureimg.png'))
+    await bot.get_channel(int(CHANNEL_ID)).send("Check if you've reached the rune, run <ign>open if you are")
+    await bot.get_channel(int(CHANNEL_ID)).send("If you aren't, run <ign>again")
+
+@bot.command(name='again')
 async def discordgorune(ctx):
+    print("Trying to go to rune again")
     await ctx.send("Going to rune again")
-    moveRune()
-    myScreenshot= pyautogui.screenshot('images/captureimg.png')
-    await ctx.send(file=discord.File('images/captureimg.png'))
-    await ctx.send("Check if you've reached the rune, run <ign>dorune if you are")
-    await ctx.send("If you aren't, run <ign>gorune")
+    returnToPosition()
+    await main()
+    await ctx.send("Check if you've reached the rune, run <ign>open if you are")
+    await ctx.send("If you aren't, run <ign>again")
 
-@bot.command(name='dorune')
+@bot.command(name='open')
 async def discorddorune(ctx):
     await ctx.send("Opening Rune...")
     pressRune()
+    time.sleep(0.3)
     myScreenshot= pyautogui.screenshot('images/captureimg.png',region=(450,160,450,160))
     await ctx.send(file=discord.File('images/captureimg.png'))
     await ctx.send("Please input the following, based on the arrow keys: UP - u, Down - d, Left - l, Right - r")
-    await ctx.send("Example, <ign>solve ruru")
+    await ctx.send("Example, <ign>do ruru")
 
-@bot.command(name='done')
+@bot.command(name='end')
 async def discorddone(ctx):
     global RUNE_EXIST
+    global RUNEX
+    global RUNEY
     await ctx.send("Returning to position")
     returnToPosition()
-    myScreenshot= pyautogui.screenshot('images/captureimg.png')
+    myScreenshot= pyautogui.screenshot('images/captureimg.png',region=(0,0,1366,768))
     await ctx.send(file=discord.File('images/captureimg.png'))
     RUNE_EXIST = 0
+    RUNEX = 0
+    RUNEY = 0
+    await main()
 
-@bot.command(name='solve')
+@bot.command(name='do')
 async def discordsolve(ctx,arg1):
     try:
         input = str(arg1) 
-        action1=input[0]
-        action2=input[1]
-        action3=input[2]
-        action4=input[3]
+        action1=str(input[0]).upper()
+        action2=str(input[1]).upper()
+        action3=str(input[2]).upper()
+        action4=str(input[3]).upper()
+
         result = action1+action2+action3+action4
         await ctx.send(result)
         
@@ -479,13 +484,14 @@ async def discordsolve(ctx,arg1):
         releaseKey(convertaction(action4))
         time.sleep(0.5)
         
-        myScreenshot= pyautogui.screenshot('images/captureimg.png')
+        myScreenshot= pyautogui.screenshot('images/captureimg.png',region=(0,0,1366,768))
         await ctx.send(file=discord.File('images/captureimg.png'))
-        await ctx.send("Please check if the rune has been solved. If not, run <ign>dorune again.")
-        await ctx.send("If rune is solved, type <ign>done to go back to position")
+        await ctx.send("Please check if the rune has been solved. If not, run <ign>open again.")
+        await ctx.send("If you aren't on the rune anymore, run <ign>again")
+        await ctx.send("If rune is solved, type <ign>end to go back to position")
 
     except(IndexError,ValueError):
-        await ctx.send('wrong input, Example, <ign>solve R R L L')
+        await ctx.send('wrong input, Example, <ign>do ruru')
 
 # @bot.command(name='positionalright')
 # async def discordpositionalfix(ctx):
@@ -502,8 +508,6 @@ async def discordsolve(ctx,arg1):
 #     myScreenshot= pyautogui.screenshot('images/captureimg.png')
 #     await ctx.send(file=discord.File('images/captureimg.png'))
 #     await ctx.send('back in position')
-
-bot.run(BOT_TOKEN)
+if BOT_STATUS == 0:
+    bot.run(BOT_TOKEN)
 #------------- DISCORD Region --------------------#
-
-
