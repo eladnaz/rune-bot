@@ -39,6 +39,7 @@ MACRO_HYBRID = ""
 BOT_TOKEN =''
 CURRENT_USER = ''
 APP_AUTH = ''
+USER_MENTION = ''
 TIME_INTERVAL = ''
 MAPLE_WIN = None
 RUNEY = 0
@@ -93,6 +94,7 @@ finally:
     MACRO_HYBRID = config['USER']['MACRO_HYBRID']
     TIME_INTERVAL = config['USER']['TIME_INTERVAL']
     RE_FACE = config['USER']['RE_FACE']
+    USER_MENTION = '<@' + config['USER']['USER_MENTION'] + '>'
 
 if BOT_STATUS == 0:
     client = discord.Client()
@@ -333,7 +335,7 @@ def returnToPosition():
     elif PLAYERX_SAVED > PLAYERX:
         player_to_saved = 2
     if player_to_saved == 2:
-        while(PLAYERX < PLAYERX_SAVED-2):
+        while(PLAYERX < PLAYERX_SAVED-1):
             pressKey(RIGHT)
             if(PLAYERX < PLAYERX_SAVED-25): 
                 flashJump()
@@ -344,7 +346,7 @@ def returnToPosition():
             time.sleep(0.1)
             releaseKey(LEFT)
     elif player_to_saved == 1:
-        while(PLAYERX > PLAYERX_SAVED+2):
+        while(PLAYERX > PLAYERX_SAVED+1):
             pressKey(LEFT)
             if(PLAYERX > PLAYERX_SAVED+25):
                 flashJump()
@@ -451,6 +453,7 @@ async def discordstart(ctx):
     
 
 async def discordsendrune():
+    await bot.get_channel(int(CHANNEL_ID)).send("Rune found! {}".format(USER_MENTION))
     myScreenshot= pyautogui.screenshot('images/captureimg.png',region=(0,0,1366,768))
     await bot.get_channel(int(CHANNEL_ID)).send(file=discord.File('images/captureimg.png'))
     await bot.get_channel(int(CHANNEL_ID)).send("Check if you've reached the rune, run <ign>open if you are")
