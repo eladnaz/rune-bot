@@ -1,4 +1,7 @@
+from discord import player
 import pyautogui
+import PIL.ImageGrab as grab
+import PIL.ImageDraw as draw
 import ctypes
 import time
 import sys
@@ -40,6 +43,8 @@ TIME_INTERVAL = ''
 MAPLE_WIN = None
 RUNEY = 0
 RUNEX = 0
+PLAYERX = 0
+PLAYERY = 0
 KEYSCAN_DICT = {'LCTRL':0x1D,
              'MINUS':0x0C,
              'EQUAL':0x0D,
@@ -87,6 +92,7 @@ finally:
     PLAY_PAUSE = config['USER']['PLAY_PAUSE']
     MACRO_HYBRID = config['USER']['MACRO_HYBRID']
     TIME_INTERVAL = config['USER']['TIME_INTERVAL']
+    RE_FACE = config['USER']['RE_FACE']
 
 if BOT_STATUS == 0:
     client = discord.Client()
@@ -184,6 +190,12 @@ class Input(ctypes.Structure):
                 ("ii", Input_I)]
 
 # Actuals Functions
+def checkNumLock():
+    hllDll = ctypes.WinDLL("User32.dll")
+    NUM_KEY = 0x90
+    if hllDll.GetKeyState(NUM_KEY) == 1:
+        pyautogui.press('numlock')
+    
 
 def pressKey(hexKeyCode):
     extra = ctypes.c_ulong(0)
@@ -206,34 +218,49 @@ def findRune():
     global RUNE_EXIST
     global RUNEX
     global RUNEY
-    if(RUNE_EXIST == 0):
-        rune_loc = 0
-        try:
-            rune_loc = pyautogui.locateOnScreen('images/minirunev3.png',confidence=0.8,region=(0,0,330,220))
-        except Exception as e:
-            rune_status = 0 
-            print("Rune not found,",e)
-        finally:
-            if rune_loc is None:
-                print("Rune not found!")
-            else:
+    image = grab.grab(bbox=(0,0,330,220))
+    pixels = image.load()
+    width,height = image.size
+    for y in range(height):
+        for x in range(width):
+            if pixels[x,y] == (221,102,255):
                 RUNE_EXIST = 1
-                print("Rune found!")
-                RUNEX,RUNEY = rune_loc.left,rune_loc.top
+                break
+        if RUNE_EXIST == 1:
+            RUNEX = x
+            RUNEY = y
+            break
+    image.close()
+    del image
+    del pixels
+    
 
-def findPlayer():
-    player_status = 1
-    player_loc = 0
-    try:
-        player_loc = pyautogui.locateOnScreen('images/minimev3.png',confidence=0.8,region=(0,0,330,220))
-    except Exception as e:
-        player_status = 0
-        print("Player not found",e)
-    finally:
-        if player_loc is None:
-            print("Player not found")
-        else:
-            return player_loc.left,player_loc.top
+
+def findPlayer(mode=0):
+    global PLAYERX
+    global PLAYERY
+    global PLAYERX_SAVED
+    global PLAYERY_SAVED
+    image = grab.grab(bbox=(0,0,330,220))
+    pixels = image.load()
+    width,height = image.size
+    player_found = 0
+    for y in range(height):
+        for x in range(width):
+            if pixels[x,y] == (255,221,68):
+                player_found = 1
+                break
+        if player_found == 1:
+            if mode == 1:
+                PLAYERX_SAVED = x
+                PLAYERY_SAVED = y
+            else:
+                PLAYERX = x
+                PLAYERY = y
+            break
+    image.close()
+    del image
+    del pixels
 
 #----------------PLAYER MOVEMENTS--------------#
 def downJump():
@@ -262,35 +289,35 @@ async def moveRune():
     #0 = same pos, 1= player right of rune, 2=player left of rune
     goToFloor()
     player_to_rune = 0 
-    playerX,playerY = findPlayer()
-    if RUNEX < playerX:
+    findPlayer()
+    if RUNEX < PLAYERX:
         player_to_rune = 1
-    elif RUNEX > playerX:
+    elif RUNEX > PLAYERX:
         player_to_rune = 2
     if player_to_rune == 2:
-        while(playerX < RUNEX-2):
+        while(PLAYERX < RUNEX-2):
             pressKey(RIGHT)
-            if not (playerX > RUNEX-25):
+            if not (PLAYERX > RUNEX-25):
                 flashJump()
-            playerX,playerY = findPlayer()
+            findPlayer()
         releaseKey(RIGHT)
     elif player_to_rune == 1:
-        while(playerX > RUNEX+2):
+        while(PLAYERX > RUNEX+2):
             pressKey(LEFT)
-            if not (playerX < RUNEX+25):
+            if not (PLAYERX < RUNEX+25):
                 flashJump()
-            playerX,playerY = findPlayer()
+            findPlayer()
         releaseKey(LEFT)
     time.sleep(0.5)
-    while(playerY > RUNEY+2 or playerY < RUNEY-2):
-        if(playerY < RUNEY):
+    while(PLAYERY > RUNEY+3 or PLAYERY < RUNEY-3):
+        if(PLAYERY < RUNEY):
             downJump()
             time.sleep(0.5)
-            playerX,playerY = findPlayer()
-        elif(playerY > RUNEY):
+            findPlayer()
+        elif(PLAYERY > RUNEY):
             ropeLift()
             time.sleep(3)
-            playerX,playerY = findPlayer()
+            findPlayer()
     print("Reached the rune!")
     await discordsendrune()
 
@@ -300,41 +327,43 @@ def returnToPosition():
     goToFloor()
         #0 = same pos, 1= player right of rune, 2=player left of rune
     player_to_saved = 0 
-    playerX,playerY = findPlayer()
-    if PLAYERX_SAVED < playerX:
+    findPlayer()
+    if PLAYERX_SAVED < PLAYERX:
         player_to_saved = 1
-    elif PLAYERX_SAVED > playerX:
+    elif PLAYERX_SAVED > PLAYERX:
         player_to_saved = 2
     if player_to_saved == 2:
-        while(playerX < PLAYERX_SAVED-2):
+        while(PLAYERX < PLAYERX_SAVED-2):
             pressKey(RIGHT)
-            if(playerX < PLAYERX_SAVED-25): 
+            if(PLAYERX < PLAYERX_SAVED-25): 
                 flashJump()
-            playerX,playerY = findPlayer()
+            findPlayer()
         releaseKey(RIGHT)
-        pressKey(LEFT)
-        time.sleep(0.1)
-        releaseKey(LEFT)
-    elif player_to_saved == 1:
-        while(playerX > PLAYERX_SAVED+2):
+        if RE_FACE == "YES":
             pressKey(LEFT)
-            if(playerX > PLAYERX_SAVED+25):
+            time.sleep(0.1)
+            releaseKey(LEFT)
+    elif player_to_saved == 1:
+        while(PLAYERX > PLAYERX_SAVED+2):
+            pressKey(LEFT)
+            if(PLAYERX > PLAYERX_SAVED+25):
                 flashJump()
-            playerX,playerY = findPlayer()
+            findPlayer()
         releaseKey(LEFT)
-        pressKey(RIGHT)
-        time.sleep(0.1)
-        releaseKey(RIGHT)
+        if RE_FACE == "YES":
+            pressKey(RIGHT)
+            time.sleep(0.1)
+            releaseKey(RIGHT)
     time.sleep(0.5)
-    while(playerY > PLAYERY_SAVED+2 or playerY < PLAYERY_SAVED-2):
-        if(playerY < PLAYERY_SAVED+2):
+    while(PLAYERY > PLAYERY_SAVED+3 or PLAYERY < PLAYERY_SAVED-3):
+        if(PLAYERY < PLAYERY_SAVED+3):
             downJump()
             time.sleep(0.5)
-            playerX,playerY = findPlayer()
-        elif(playerY > PLAYERY_SAVED-2):
+            findPlayer()
+        elif(PLAYERY > PLAYERY_SAVED-3):
             ropeLift()
             time.sleep(3)
-            playerX,playerY = findPlayer()
+            findPlayer()
     RUNE_EXIST = 0
     time.sleep(0.5)
     toggleMacro()
@@ -347,10 +376,12 @@ def pressRune():
 
 def goToFloor():
     while(True):
-        playerX,playerY = findPlayer()
+        findPlayer()
+        oldPlayerY = PLAYERY
         downJump()
-        newPlayerX,newPlayerY = findPlayer()
-        if(playerY == newPlayerY):
+        findPlayer()
+        newPlayerY = PLAYERY
+        if(oldPlayerY == newPlayerY):
             break
 
 def convertaction(action):
@@ -368,11 +399,10 @@ def convertaction(action):
 
 
 async def main():
-    global PLAYERX_SAVED
-    global PLAYERY_SAVED
     global RUNE_EXIST
-    PLAYERX_SAVED,PLAYERY_SAVED = findPlayer()
+    findPlayer(1)
     sleepTime = int(TIME_INTERVAL)
+    checkNumLock()
     while(RUNE_EXIST == 0):
         findRune()
         if(RUNE_EXIST == 1):
@@ -411,10 +441,14 @@ async def discordlanjiao(ctx):
 @bot.command(name='start')
 async def discordstart(ctx):
     global BOT_STATUS
-    await ctx.send('RuneBot is starting for '+CURRENT_USER)
-    await ctx.send('It will scan every '+ TIME_INTERVAL + ' seconds')
-    BOT_STATUS = 1
-    await main()
+    if BOT_STATUS == 0:
+        await ctx.send('RuneBot is starting for '+CURRENT_USER)
+        await ctx.send('It will scan every '+ TIME_INTERVAL + ' seconds')
+        BOT_STATUS = 1
+        await main()
+    else:
+        await ctx.send("RuneBot was already started, this command won't do anything")
+    
 
 async def discordsendrune():
     myScreenshot= pyautogui.screenshot('images/captureimg.png',region=(0,0,1366,768))
