@@ -1,3 +1,2 @@
 # rune-bot
-# Change flow of loop ( e.g. lock <ign>start)
-# Split application into modules
+This bot was a personal guilty project started between me and Aaron to counter runes in a game called MapleStory which stops the player from gaining any resources when automating our actions and not putting focus on the game. The rune-bot searches for a rune through the Minimap of the game and moves the character towards the rune. Once there, it will activate the rune and send the direction keys required to be pressed in an image towards discord through Discord's API where any one of our friends could solve it for us if the player themselves aren't available at the moment. Once the rune has been solved, the character will be automatically moved back to its original position to continue where it left off.
